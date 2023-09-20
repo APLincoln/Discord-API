@@ -10,7 +10,7 @@ This is a repo where I will be testing the Discord API to look into creating a m
 - You have given the bot all message privileges and message content privileges.
 - You have added your bot to your channel using the generated link.
 
-## Steps
+### Steps
 
 1) Using the sample provided in the app folder populate a .env file.
 2) Run the main file locally. You should see a message in the console stating that the bot is running. You can validate this by checking if the bot is online in your discord server.

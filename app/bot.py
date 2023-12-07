@@ -1,7 +1,7 @@
+# pylint: disable=import-error disable=unused-variable disable=line-too-long
 import discord
-from discord.ext import commands
-import responses
 import commands
+import responses
 from dotenv import load_dotenv
 from azure.ai.contentsafety import ContentSafetyClient
 from azure.core.credentials import AzureKeyCredential
@@ -12,6 +12,7 @@ import os
 load_dotenv()
 
 def azure_text_moderation(mod_text):
+    """This function will take the message and send it to the azure content safety api"""
     endpoint = "https://moderation-test.cognitiveservices.azure.com/"
     key=os.environ["azure_token"]
     client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
@@ -44,29 +45,34 @@ def azure_text_moderation(mod_text):
     return result
 
 async def send_message(message, user_message, is_private, flag):
+    """This function will respond with what the user sent in the channel, This is a test function"""
     try:
         if flag:
             response = responses.handle_responses(user_message, flag)
-            message.author.send(response) if is_private else await message.channel.send(response)
-            await message.delete()
+            handle_message = message.author.send(response) if is_private else await message.channel.send(response)
+            delete_message = await message.delete()
             print("This message has been removed")
         else:
             response = responses.handle_responses(user_message, flag)
-            message.author.send(response) if is_private else await message.channel.send(response)
+            handle_message = message.author.send(response) if is_private else await message.channel.send(response)
     except Exception as e:
         print(f"was un able to return response {e}")
 
 async def handle_moderation(message, user_message, is_private, flag, logs):
+    """This function takes the messages that need moderating and handles the moderation"""
     try:
         response = responses.handle_responses(user_message, flag)
-        message.author.send(response) if is_private else await message.channel.send(response)
+        handle_message = message.author.send(response) if is_private else await message.channel.send(response)
         await logs.send(f"{message.author} sent {message.content} and was moderated for {user_message}")
         await message.delete()
         print("This message has been removed")
     except Exception as e :
         print(f"was unable to return response {e}")
 
-async def handle_command(message, user_message, is_private):
+async def handle_command(message, user_message, is_private, flag):
+    """This function handles the commands for the users, commands are
+    defined within the commands.py file
+    """
     command = str(user_message).split()[0][1:]
     print(command)
     if command == "clear":
@@ -81,14 +87,15 @@ async def handle_command(message, user_message, is_private):
         await message.channel.send("This is not a recognised command")
 
     try:
-        response = responses.handle_responses(user_message)
-        message.author.send(response) if is_private else await message.channel.send(response)
+        response = responses.handle_responses(user_message, flag)
+        handle_message = message.author.send(response) if is_private else await message.channel.send(response)
     except Exception as e:
         print(f"was un able to return response {e}")
 
 
 
 def run_discord_bot():
+    """This is the main function for running the bot"""
     intents = discord.Intents.all()
     token = os.environ["bot_token"]
     # print(TOKEN)
@@ -128,7 +135,7 @@ def run_discord_bot():
         print(f"{username} sent {user_message} in {channel}")
 
         if user_message[0] == "!":
-            await handle_command(message, user_message, is_private=False)
+            await handle_command(message, user_message, is_private=False, flag=flag)
         elif flag:
             await handle_moderation(message, new_text, is_private=False, flag=flag, logs=logs)
         else:

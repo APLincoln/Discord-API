@@ -113,25 +113,28 @@ def run_discord_bot():
 
     @client.event
     async def on_message(message):
+
+        # This stops the bot from replying to itself
+        if message.author == client.user:
+            return
+
         logs = ""
         for server in client.guilds:
             for channel in server.channels:
                 if str(channel.type) == 'text' and channel.name == "logs":
                     logs = channel
-        flag = False
-        if message.author == client.user:
-            return
-        # print(message)
+
         username = str(message.author)
         user_message = str(message.content)
         channel = str(message.channel)
         moderation = azure_text_moderation(user_message)
+
+        flag = False
         new_text = ""
         for res in moderation:
             new_text += f'{res["type"]}, '
         if len(moderation) > 0:
             flag = True
-        print(new_text)
         print(f"{username} sent {user_message} in {channel}")
 
         if user_message[0] == "!":

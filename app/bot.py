@@ -13,7 +13,7 @@ load_dotenv()
 
 def azure_text_moderation(mod_text):
     """This function will take the message and send it to the azure content safety api"""
-    endpoint = "https://moderation-test.cognitiveservices.azure.com/"
+    endpoint = os.environ["endpoint"]
     key=os.environ["azure_token"]
     client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
 

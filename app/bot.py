@@ -133,6 +133,7 @@ def run_discord_bot():
         new_text = ""
         for res in moderation:
             new_text += f'{res["type"]}, '
+        new_text = new_text[:-2]
         if len(moderation) > 0:
             flag = True
         print(f"{username} sent {user_message} in {channel}")

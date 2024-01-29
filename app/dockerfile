@@ -1,0 +1,13 @@
+FROM python:3.9
+
+RUN pip install --upgrade pip
+
+RUN pip install azure-ai-contentsafety google-cloud-language discord.py azure-core
+
+RUN pip install python-dotenv
+
+COPY main.py bot.py responses.py gcp_moderation.py azure_moderation.py handle_moderation.py commands.py .env .
+
+WORKDIR .
+
+CMD ["python", "main.py"]

@@ -1,77 +1,13 @@
 # pylint: disable=import-error disable=unused-variable disable=line-too-long
+import os
 import discord
 import commands
 import responses
 import handle_moderation
+import azure_moderation
+import gcp_moderation
 from dotenv import load_dotenv
-from azure.ai.contentsafety import ContentSafetyClient
-from azure.core.credentials import AzureKeyCredential
-from azure.core.exceptions import HttpResponseError
-from azure.ai.contentsafety.models import AnalyzeTextOptions
-from google.cloud import language_v1
-import os
-
 load_dotenv()
-
-async def gcp_text_moderation(mod_text):
-    key = os.environ["gcp_key"]
-    project = os.environ["gcp_project"]
-    client = language_v1.LanguageServiceClient(
-        client_options={"api_key": key, "quota_project_id": project}
-    )
-    # client_options = creds
-    # client = language_v2.LanguageServiceAsyncClient(client_options=client_options)
-    # document = language_v1.Document()
-    text="this is a test"
-    document = language_v1.Document(content = mod_text, type_=language_v1.Document.Type.PLAIN_TEXT)
-    # document.content = text
-    request = language_v1.ModerateTextRequest(
-        document=document,
-    )
-    response = client.moderate_text(request=request)
-    moderate = []
-    for res in response.moderation_categories:
-        if res.confidence > 0.5:
-            moderate.append({"name": res.name, "confidence": res.confidence})
-    print(moderate)
-    return moderate
-
-def azure_text_moderation(mod_text):
-    """This function will take the message and send it to the azure content safety api
-        This will return a value 0-7 the higher the number the more severe
-    """
-    endpoint = os.environ["endpoint"]
-    key=os.environ["azure_token"]
-    # mod_text = mod_text.replace(" ", "")
-    print(mod_text)
-    client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
-
-    request= AnalyzeTextOptions(text=mod_text)
-
-    try:
-        response = client.analyze_text(request)
-    except HttpResponseError as e:
-        print("Analyze image failed.")
-        if e.error:
-            print(f"Error code: {e.error.code}")
-            print(f"Error message: {e.error.message}")
-            raise
-        print(e)
-        raise
-    result = []
-    if response.hate_result.severity >= 2:
-        print(f"Hate severity: {response.hate_result.severity}")
-        result.append({"severity": response.hate_result.severity, "type": "Hate"})
-    if response.self_harm_result.severity >= 2:
-        print(f"SelfHarm severity: {response.self_harm_result.severity}")
-        result.append({"severity": response.self_harm_result.severity, "type": "SelfHarm"})
-    if response.sexual_result.severity >= 2:
-        print(f"Sexual severity: {response.sexual_result.severity}")
-        result.append({"severity": response.sexual_result.severity, "type": "Sexual"})
-    if response.violence_result.severity >= 2:
-        print(f"Violence severity: {response.violence_result.severity}")
-        result.append({"severity": response.violence_result.severity, "type": "Violence"})
-    return result
 
 async def send_message(message, user_message, is_private, flag):
     """This function will respond with what the user sent in the channel, This is a test function"""
@@ -87,19 +23,7 @@ async def send_message(message, user_message, is_private, flag):
     except Exception as e:
         print(f"was un able to return response {e}")
 
-# async def handle_moderation(message, user_message, is_private, flag, logs, azure_response, gcp_response, moderation_responses):
-#     """This function takes the messages that need moderating and handles the moderation"""
-#     try:
-#         response = responses.handle_responses(user_message, flag)
-#         handle_message = message.author.send(response) if is_private else await message.channel.send(response)
-#         await logs.send(f"{message.author} sent {message.content} and was moderated for {user_message}")
-#         await moderation_responses.send(f"Azure response: {azure_response}\n GCP Response: {gcp_response}")
-#         await message.delete()
-#         print("This message has been removed")
-#     except Exception as e :
-#         print(f"was unable to return response {e}")
-
-async def handle_command(message, user_message, is_private, flag):
+async def handle_command(message, user_message):
     """This function handles the commands for the users, commands are
     defined within the commands.py file
     """
@@ -115,12 +39,6 @@ async def handle_command(message, user_message, is_private, flag):
         await commands.clear_command(limit, message.channel)
     else:
         await message.channel.send("This is not a recognised command")
-
-    try:
-        response = responses.handle_responses(user_message, flag)
-        # handle_message = message.author.send(response) if is_private else await message.channel.send(response)
-    except Exception as e:
-        print(f"was un able to return response {e}")
 
 
 
@@ -155,23 +73,24 @@ def run_discord_bot():
         username = str(message.author)
         user_message = str(message.content)
         channel = str(message.channel)
-        azure_response = azure_text_moderation(user_message)
-        gcp_response = await gcp_text_moderation(user_message)
+        azure_response = azure_moderation.azure_text_moderation(user_message)
+        gcp_response = await gcp_moderation.gcp_text_moderation(user_message)
 
         flag = False
+        # This creates a string for the log message
         new_text = ""
         for res in azure_response:
             new_text += f'{res["type"]}, '
         new_text = new_text[:-2]
+        # Here we set the flag true if the message has been moderated use this flag to handle the moderation.
         if len(azure_response) > 0:
             flag = True
         print(f"{username} sent {user_message} in {channel}")
 
         if user_message[0] == "!":
-            await handle_command(message, user_message, is_private=False, flag=flag)
+            await handle_command(message, user_message)
         elif flag:
             await handle_moderation.handle_moderation(message, new_text, is_private=False, flag=flag, logs=logs, azure_response=azure_response, gcp_response=gcp_response, moderation_responses=moderation_responses)
         else:
             await send_message(message, user_message, is_private=False, flag=flag)
-
     client.run(token)

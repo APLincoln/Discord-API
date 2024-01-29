@@ -2,19 +2,48 @@
 import discord
 import commands
 import responses
+import handle_moderation
 from dotenv import load_dotenv
 from azure.ai.contentsafety import ContentSafetyClient
 from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import HttpResponseError
 from azure.ai.contentsafety.models import AnalyzeTextOptions
+from google.cloud import language_v1
 import os
 
 load_dotenv()
 
+async def gcp_text_moderation(mod_text):
+    key = os.environ["gcp_key"]
+    project = os.environ["gcp_project"]
+    client = language_v1.LanguageServiceClient(
+        client_options={"api_key": key, "quota_project_id": project}
+    )
+    # client_options = creds
+    # client = language_v2.LanguageServiceAsyncClient(client_options=client_options)
+    # document = language_v1.Document()
+    text="this is a test"
+    document = language_v1.Document(content = mod_text, type_=language_v1.Document.Type.PLAIN_TEXT)
+    # document.content = text
+    request = language_v1.ModerateTextRequest(
+        document=document,
+    )
+    response = client.moderate_text(request=request)
+    moderate = []
+    for res in response.moderation_categories:
+        if res.confidence > 0.5:
+            moderate.append({"name": res.name, "confidence": res.confidence})
+    print(moderate)
+    return moderate
+
 def azure_text_moderation(mod_text):
-    """This function will take the message and send it to the azure content safety api"""
+    """This function will take the message and send it to the azure content safety api
+        This will return a value 0-7 the higher the number the more severe
+    """
     endpoint = os.environ["endpoint"]
     key=os.environ["azure_token"]
+    # mod_text = mod_text.replace(" ", "")
+    print(mod_text)
     client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
 
     request= AnalyzeTextOptions(text=mod_text)
@@ -58,16 +87,17 @@ async def send_message(message, user_message, is_private, flag):
     except Exception as e:
         print(f"was un able to return response {e}")
 
-async def handle_moderation(message, user_message, is_private, flag, logs):
-    """This function takes the messages that need moderating and handles the moderation"""
-    try:
-        response = responses.handle_responses(user_message, flag)
-        handle_message = message.author.send(response) if is_private else await message.channel.send(response)
-        await logs.send(f"{message.author} sent {message.content} and was moderated for {user_message}")
-        await message.delete()
-        print("This message has been removed")
-    except Exception as e :
-        print(f"was unable to return response {e}")
+# async def handle_moderation(message, user_message, is_private, flag, logs, azure_response, gcp_response, moderation_responses):
+#     """This function takes the messages that need moderating and handles the moderation"""
+#     try:
+#         response = responses.handle_responses(user_message, flag)
+#         handle_message = message.author.send(response) if is_private else await message.channel.send(response)
+#         await logs.send(f"{message.author} sent {message.content} and was moderated for {user_message}")
+#         await moderation_responses.send(f"Azure response: {azure_response}\n GCP Response: {gcp_response}")
+#         await message.delete()
+#         print("This message has been removed")
+#     except Exception as e :
+#         print(f"was unable to return response {e}")
 
 async def handle_command(message, user_message, is_private, flag):
     """This function handles the commands for the users, commands are
@@ -88,7 +118,7 @@ async def handle_command(message, user_message, is_private, flag):
 
     try:
         response = responses.handle_responses(user_message, flag)
-        handle_message = message.author.send(response) if is_private else await message.channel.send(response)
+        # handle_message = message.author.send(response) if is_private else await message.channel.send(response)
     except Exception as e:
         print(f"was un able to return response {e}")
 
@@ -100,11 +130,6 @@ def run_discord_bot():
     token = os.environ["bot_token"]
     # print(TOKEN)
     client = discord.Client(intents=intents)
-    logs = ""
-    for server in client.guilds:
-        for channel in server.channels:
-            if str(channel.type) == 'text' and channel.name == "logs":
-                logs = channel
 
 
     @client.event
@@ -119,29 +144,33 @@ def run_discord_bot():
             return
 
         logs = ""
+        moderation_responses=""
         for server in client.guilds:
             for channel in server.channels:
                 if str(channel.type) == 'text' and channel.name == "logs":
                     logs = channel
+                elif str(channel.type) == 'text' and channel.name == "moderation-responses":
+                    moderation_responses = channel
 
         username = str(message.author)
         user_message = str(message.content)
         channel = str(message.channel)
-        moderation = azure_text_moderation(user_message)
+        azure_response = azure_text_moderation(user_message)
+        gcp_response = await gcp_text_moderation(user_message)
 
         flag = False
         new_text = ""
-        for res in moderation:
+        for res in azure_response:
             new_text += f'{res["type"]}, '
         new_text = new_text[:-2]
-        if len(moderation) > 0:
+        if len(azure_response) > 0:
             flag = True
         print(f"{username} sent {user_message} in {channel}")
 
         if user_message[0] == "!":
             await handle_command(message, user_message, is_private=False, flag=flag)
         elif flag:
-            await handle_moderation(message, new_text, is_private=False, flag=flag, logs=logs)
+            await handle_moderation.handle_moderation(message, new_text, is_private=False, flag=flag, logs=logs, azure_response=azure_response, gcp_response=gcp_response, moderation_responses=moderation_responses)
         else:
             await send_message(message, user_message, is_private=False, flag=flag)
 

@@ -1,0 +1,20 @@
+@startuml
+
+autoactivate on
+
+Actor Admin
+participant "DiscordServer"
+participant "DiscordBot" as DB
+participant "Bot Mamagement Server"  as BMS
+Database Database
+
+  Admin -> DiscordServer: Send Command
+  DiscordServer -> DB: Sends User Message
+  DB -> BMS: Sends User Message
+  BMS -> Database: Data Request
+  Database --> BMS: Requested Database
+  BMS --> DB: Generated Report
+  DB --> DiscordServer: Generated Report
+  DiscordServer --> Admin: Display Report
+
+@enduml

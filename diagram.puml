@@ -1,0 +1,29 @@
+@startuml
+
+autoactivate on
+
+Actor       User                            as User
+participant "DiscordServer"
+participant "DiscordBot" as DB
+participant "Bot Mamagement Server"  as BMS
+participant "Azure Content Safety" as ACS
+database     Database                       as Database
+
+  User -> DiscordServer: Send Message
+  DiscordServer -> DB: Sends User Message
+  DB -> BMS: Sends User Message
+  BMS -> ACS: Send Text Content
+  alt Message Moderated
+    ACS --> BMS: Moderation Required (Categorised)
+    BMS -> Database: Store Violation
+    Database --> BMS: Success Message
+    BMS --> DB: Moderation Method (Remove Message)
+    DB -->  DiscordServer: Remove Message and Log
+    DiscordServer --> User: Display "Message Moderated"
+  else Message Not Moderated
+    ACS --> BMS: No Modertion
+    BMS --> DB: No Action
+    DB --> DiscordServer: No Action
+    DiscordServer --> User: No Change
+  end
+@enduml

@@ -11,6 +11,7 @@ def azure_text_moderation(mod_text):
         This will return a value 0-7 the higher the number the more severe
     """
     endpoint = os.environ["endpoint"]
+    print(endpoint)
     key=os.environ["azure_token"]
     print(mod_text)
     client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
@@ -28,16 +29,18 @@ def azure_text_moderation(mod_text):
         print(e)
         raise
     result = []
-    if response.hate_result.severity >= 2:
-        print(f"Hate severity: {response.hate_result.severity}")
-        result.append({"severity": response.hate_result.severity, "type": "Hate"})
-    if response.self_harm_result.severity >= 2:
-        print(f"SelfHarm severity: {response.self_harm_result.severity}")
-        result.append({"severity": response.self_harm_result.severity, "type": "SelfHarm"})
-    if response.sexual_result.severity >= 2:
-        print(f"Sexual severity: {response.sexual_result.severity}")
-        result.append({"severity": response.sexual_result.severity, "type": "Sexual"})
-    if response.violence_result.severity >= 2:
-        print(f"Violence severity: {response.violence_result.severity}")
-        result.append({"severity": response.violence_result.severity, "type": "Violence"})
+    print(response)
+    for cat in response['categoriesAnalysis']:
+        if cat.category == 'Hate' and cat.severity >= 2:
+            # print(f"Hate severity: {response.hate_result.severity}")
+            result.append({"severity": cat.severity, "type": "Hate"})
+        if cat.category == 'SelfHarm' and cat.severity >= 2:
+            # print(f"SelfHarm severity: {response.self_harm_result.severity}")
+            result.append({"severity": cat.severity, "type": "SelfHarm"})
+        if cat.category == 'Sexual' and cat.severity >= 2:
+            # print(f"Sexual severity: {response.sexual_result.severity}")
+            result.append({"severity": cat.severity, "type": "Sexual"})
+        if cat.category == 'violence' and cat.severity >= 2:
+            # print(f"Violence severity: {response.violence_result.severity}")
+            result.append({"severity": cat.severity, "type": "Violence"})
     return result

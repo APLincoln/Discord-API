@@ -7,6 +7,7 @@ import handle_moderation
 import azure_moderation
 import gcp_moderation
 from dotenv import load_dotenv
+
 load_dotenv()
 
 async def send_message(message, user_message, is_private, flag):
@@ -46,7 +47,7 @@ def run_discord_bot():
     """This is the main function for running the bot"""
     intents = discord.Intents.all()
     token = os.environ["bot_token"]
-    # print(TOKEN)
+    print(token)
     client = discord.Client(intents=intents)
 
 
@@ -56,7 +57,7 @@ def run_discord_bot():
 
     @client.event
     async def on_message(message):
-
+        print("in on message")
         # This stops the bot from replying to itself
         if message.author == client.user:
             return

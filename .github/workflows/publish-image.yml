@@ -3,6 +3,7 @@ name: Docker
 on:
   push:
     branches: main
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: modserver

@@ -12,11 +12,13 @@ jobs:
   build:
     name: Build container image
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - path: app/
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - name: CD to app folder
-        run: cd app
       - name: Log into registry
         uses: azure/docker-login@v1
         with:

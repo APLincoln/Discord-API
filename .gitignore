@@ -134,3 +134,9 @@ app/bin/*
 app/include/*
 app/__pycache__
 app/lib/*
+app/__pycache__
+app/bin
+app/include
+app/lib
+app/*.cfg
+*.pyc

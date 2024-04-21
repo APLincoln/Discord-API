@@ -6,17 +6,18 @@ from azure.ai.contentsafety.models import AnalyzeTextOptions
 from dotenv import load_dotenv
 load_dotenv()
 
-def azure_text_moderation(mod_text):
+def azure_text_moderation(mod_text: str):
     """This function will take the message and send it to the azure content safety api
         This will return a value 0-7 the higher the number the more severe
     """
     endpoint = os.environ["endpoint"]
-    print(endpoint)
     key=os.environ["azure_token"]
-    print(mod_text)
-    client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
 
-    request= AnalyzeTextOptions(text=mod_text)
+    client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
+    flip_exclamation = mod_text.replace("!", "i")
+    filtered_text = ''.join(e for e in flip_exclamation if e.isalnum())
+
+    request= AnalyzeTextOptions(text=filtered_text)
 
     try:
         response = client.analyze_text(request)

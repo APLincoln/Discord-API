@@ -6,9 +6,12 @@ import responses
 import handle_moderation
 import azure_moderation
 import gcp_moderation
+import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
 
 async def send_message(message, user_message, is_private, flag):
     """This function will respond with what the user sent in the channel, This is a test function"""
@@ -41,6 +44,15 @@ async def handle_command(message, user_message):
     else:
         await message.channel.send("This is not a recognised command")
 
+def populate_channels(client, channel_dict):
+    new_dict = channel_dict
+    print("in the populate")
+    for server in client.guilds:
+        print(server)
+        for text_channel in server.guilds:
+            new_dict[f"{text_channel.name}"] = 0
+    return new_dict
+
 
 
 def run_discord_bot():
@@ -49,6 +61,12 @@ def run_discord_bot():
     token = os.environ["bot_token"]
     print(token)
     client = discord.Client(intents=intents)
+    channel_speed = {"time": "Test"}
+    for server in client.guilds:
+        print(server)
+        for channel in server.guilds:
+            channel_speed[f"{channel.name}"] = 0
+
 
 
     @client.event
@@ -57,6 +75,7 @@ def run_discord_bot():
 
     @client.event
     async def on_message(message):
+        print(channel_speed)
         print("in on message")
         # This stops the bot from replying to itself
         if message.author == client.user:
@@ -75,7 +94,7 @@ def run_discord_bot():
         user_message = str(message.content)
         channel = str(message.channel)
         azure_response = azure_moderation.azure_text_moderation(user_message)
-        gcp_response = await gcp_moderation.gcp_text_moderation(user_message)
+        # gcp_response = await gcp_moderation.gcp_text_moderation(user_message)
 
         flag = False
         # This creates a string for the log message
@@ -91,7 +110,7 @@ def run_discord_bot():
         if user_message[0] == "!":
             await handle_command(message, user_message)
         elif flag:
-            await handle_moderation.handle_moderation(message, new_text, is_private=False, flag=flag, logs=logs, azure_response=azure_response, gcp_response=gcp_response, moderation_responses=moderation_responses)
+            await handle_moderation.handle_moderation(message, new_text, is_private=False, flag=flag, logs=logs, azure_response=azure_response, moderation_responses=moderation_responses)
         else:
             await send_message(message, user_message, is_private=False, flag=flag)
     client.run(token)

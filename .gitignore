@@ -130,6 +130,8 @@ dist
 .pnp.*
 
 #ignore local env folders
+app/venv
+app/venv/*
 app/bin/*
 app/include/*
 app/__pycache__

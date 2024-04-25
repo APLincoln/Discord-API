@@ -1,3 +1,5 @@
+# Originally there was functionality for both GCP and Azure in this bot
+# Please use this module if you wish to use GCP
 import os
 from google.cloud import language_v1
 from dotenv import load_dotenv
@@ -5,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 async def gcp_text_moderation(mod_text):
+    """This function will send the message to GCP to be checked"""
     key = os.environ["gcp_key"]
     project = os.environ["gcp_project"]
     client = language_v1.LanguageServiceClient(

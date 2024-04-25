@@ -1,116 +1,85 @@
-# pylint: disable=import-error disable=unused-variable disable=line-too-long
+"""This is where the bot is run and events are triggered"""
+
 import os
 import discord
-import commands
-import responses
-import handle_moderation
-import azure_moderation
-import gcp_moderation
-import datetime
+from discord.ext import commands
+from handlers import azure_moderation, chat_speed, get_channels
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Global Variables
+threshold: int = 2
+chat_spike_time_threshold: int = 60
+chat_spike_message_threshold: int = 30
 
-
-async def send_message(message, user_message, is_private, flag):
-    """This function will respond with what the user sent in the channel, This is a test function"""
-    try:
-        if flag:
-            response = responses.handle_responses(user_message, flag)
-            handle_message = message.author.send(response) if is_private else await message.channel.send(response)
-            delete_message = await message.delete()
-            print("This message has been removed")
-        else:
-            response = responses.handle_responses(user_message, flag)
-            handle_message = message.author.send(response) if is_private else await message.channel.send(response)
-    except Exception as e:
-        print(f"was un able to return response {e}")
-
-async def handle_command(message, user_message):
-    """This function handles the commands for the users, commands are
-    defined within the commands.py file
-    """
-    command = str(user_message).split()[0][1:]
-    print(command)
-    if command == "clear":
-        limit = 5
-        get_limit = str(user_message).split()
-        if len(get_limit) == 2:
-            limit = int(get_limit[1])
-        else:
-            message.channel.send("The command should be clear (number to clear)")
-        await commands.clear_command(limit, message.channel)
-    else:
-        await message.channel.send("This is not a recognised command")
-
-def populate_channels(client, channel_dict):
-    new_dict = channel_dict
-    print("in the populate")
+def get_guild_id(client):
+    """This takes the client intialised and will return the guild id for the Discord server"""
+    guild_id = ''
     for server in client.guilds:
-        print(server)
-        for text_channel in server.guilds:
-            new_dict[f"{text_channel.name}"] = 0
-    return new_dict
+        for channel in server.channels:
+            guild_id = channel.guild.id
+    return guild_id
 
+def check_admin(interaction: discord.Integration):
+    """Check if user has role admin"""
+    if "admin" in [y.name.lower() for y in interaction.user.roles]:
+        print("has admin")
 
-
-def run_discord_bot():
+def run_discord_bot(config):
     """This is the main function for running the bot"""
     intents = discord.Intents.all()
     token = os.environ["bot_token"]
-    print(token)
-    client = discord.Client(intents=intents)
-    channel_speed = {"time": "Test"}
-    for server in client.guilds:
-        print(server)
-        for channel in server.guilds:
-            channel_speed[f"{channel.name}"] = 0
-
+    client = commands.Bot(command_prefix="$", intents=intents)
 
 
     @client.event
     async def on_ready():
+        guild_id = get_guild_id(client)
+        await client.tree.sync(guild=discord.Object(id=guild_id))
         print(f'{client.user} is ready!')
+
+    @client.tree.command(name="clear", description = "This command will clear messages")
+    @commands.has_permissions(manage_messages = True)
+    async def _clear(ctx: discord.Interaction, amount: int= 10):
+        role = discord.utils.get(ctx.guild.roles, name="tester")
+        if role in ctx.user.roles:
+            await ctx.response.defer()
+            await ctx.channel.purge(limit=amount)
+        else:
+            await ctx.response.send_message("you do not have the admin role", ephemeral=True)
+
+    @client.tree.command(name="remove-slowdown",
+                         description="This command will remove the slow mode")
+    @commands.has_permissions(manage_messages = True)
+    async def _remove_slow(ctx: discord.Interaction):
+        role = discord.utils.get(ctx.guild.roles, name="admin")
+        if role in ctx.user.roles:
+            await ctx.channel.edit(slowmode_delay=0)
+            await ctx.response.send_message("slowdown removed", ephemeral=True)
+        else:
+            await ctx.response.send_message("you do not have the correct permission", ephemeral=True)
 
     @client.event
     async def on_message(message):
-        print(channel_speed)
-        print("in on message")
         # This stops the bot from replying to itself
         if message.author == client.user:
             return
 
-        logs = ""
-        moderation_responses=""
-        for server in client.guilds:
-            for channel in server.channels:
-                if str(channel.type) == 'text' and channel.name == "logs":
-                    logs = channel
-                elif str(channel.type) == 'text' and channel.name == "moderation-responses":
-                    moderation_responses = channel
+        channels = get_channels.channels(client)
 
-        username = str(message.author)
-        user_message = str(message.content)
-        channel = str(message.channel)
-        azure_response = azure_moderation.azure_text_moderation(user_message)
-        # gcp_response = await gcp_moderation.gcp_text_moderation(user_message)
+        # This will check for a chat spike in the channel
+        await chat_speed.check_for_spike(channel = message.channel,
+                                         alert_channel=channels["alerts"],
+                                         threshold_time = config["spike_time_threshold"],
+                                         threshold_count = config["spike_count_threshold"])
 
-        flag = False
-        # This creates a string for the log message
-        new_text = ""
-        for res in azure_response:
-            new_text += f'{res["type"]}, '
-        new_text = new_text[:-2]
-        # Here we set the flag true if the message has been moderated use this flag to handle the moderation.
-        if len(azure_response) > 0:
-            flag = True
-        print(f"{username} sent {user_message} in {channel}")
+        await azure_moderation.azure_text_moderation(hate_threshold=config["hate_threshold"],
+                                                     selfharm_threshold=config["selfharm_threshold"],
+                                                     sexual_threshold=config["sexual_threshold"],
+                                                     violence_threshold=config["violence_threshold"],
+                                                     message=message,
+                                                     logs=channels["logs"],
+                                                     moderation_responses=channels["moderation-responses"])
 
-        if user_message[0] == "!":
-            await handle_command(message, user_message)
-        elif flag:
-            await handle_moderation.handle_moderation(message, new_text, is_private=False, flag=flag, logs=logs, azure_response=azure_response, moderation_responses=moderation_responses)
-        else:
-            await send_message(message, user_message, is_private=False, flag=flag)
     client.run(token)

@@ -1,0 +1,7 @@
+hate_threshold=2
+selfharm_threshold=2
+sexual_threshold=2
+violence_threshold=2
+
+spike_time_threshold=60
+spike_count_threshold=30

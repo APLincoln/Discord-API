@@ -6,3 +6,10 @@ azure-cognitiveservices-vision-contentmoderator
 python-dotenv
 discord
 discord.py
+pyodbc
+fastapi
+uvicorn[standard]
+pydantic
+azure-identity
+pymongo
+paramiko

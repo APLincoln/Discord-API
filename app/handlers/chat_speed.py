@@ -31,4 +31,5 @@ async def check_for_spike(alert_channel, channel, threshold_time, threshold_coun
 
 def threshold_checker(flag:bool, current_delay:int, message_count:int, threshold_count:int):
     """checks if threshold met, pulled into seporate function for testing """
-    return bool(flag and current_delay < 1 and message_count <= threshold_count)
+    return bool(flag and current_delay < 1 and message_count >= threshold_count)
+

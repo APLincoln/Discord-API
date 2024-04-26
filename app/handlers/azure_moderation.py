@@ -7,6 +7,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import HttpResponseError
 from azure.ai.contentsafety.models import AnalyzeTextOptions
 from handlers import handle_moderation
+from handlers import violations_database_handler as vdbh
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -72,6 +73,8 @@ async def log_handler(azure_response, message: discord.Message,
 
     print(f"{message} was sent in {message.channel}")
     if len(azure_response) > 0:
+        record = {"channel_name": message.channel.name, "violations": azure_response, "message": message.content, "date": message.created_at}
+        vdbh.add_record(record)
         await handle_moderation.handle_moderation(message=message,
                                                   mod_category_text=mod_category_text,
                                                   logs=logs, azure_response=azure_response,

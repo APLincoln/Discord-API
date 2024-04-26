@@ -5,10 +5,7 @@ def channels(client):
     channels_dict = {}
     for server in client.guilds:
         for channel in server.channels:
-            if str(channel.type) == 'text' and channel.name == "logs":
-                channels_dict.update({"logs": channel})
-            elif str(channel.type) == 'text' and channel.name == "moderation-responses":
-                channels_dict.update({"moderation-responses": channel})
-            elif str(channel.type) == 'text' and channel.name == "alerts":
-                channels_dict.update({"alerts": channel})
+            if str(channel.type):
+                channels_dict.update({f"{channel.name}": channel})
+
     return channels_dict

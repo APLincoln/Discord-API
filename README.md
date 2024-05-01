@@ -6,6 +6,16 @@ This repo contains code for a moderation bot that uses Azure Content Safety Stud
 
 ### Prerequisites
 
+#### Discord
+
+In order for the bot to run it will require three channels to be created within the Discord server:
+
+- logs: This channel will be used to log any instance of a violation detected within the server.
+- alerts: This channel will be used to alert in the case of a chat spike within a channel in the server.
+- reports: This channel will be used to post violation reports when requested.
+
+A role named `Admin` will need to be created and added to any users that require the use of the commands offered by this bot.
+
 #### Environment variables
 
 Using the template provided created a new .env file within the root of the app folder (same location as the .env.sample). The following prerequisites will run you through where to find these variables.

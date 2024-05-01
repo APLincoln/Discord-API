@@ -22,7 +22,7 @@ def create_collection():
     else:
         print("Collection created and is now ready!")
         new_collection = db.create_collection("Violations")
-
+    client.close()
     return "collection created!"
 
 def add_record(record):
@@ -32,12 +32,14 @@ def add_record(record):
     collection = db["Violations"]
     insert=collection.insert_one(record)
     print(f"{insert.inserted_id} was inserted into table")
+    client.close()
     return "done"
 
 async def build_report(month:int, year:int, reports):
     """Takes a month and year to filter records from MongoDB and generate a report"""
+    num_days = calendar.monthrange(year, month)[1]
     start_date = datetime(year, month, 1)
-    end_date = datetime(year, month, get_last_day_of_month(year, month))
+    end_date = datetime(year, month, num_days)
     print(f"end: {end_date}")
     print(f"start: {start_date}")
     client=MongoClient(os.environ["mongodb_connection_string"], server_api=ServerApi('1'))
@@ -65,15 +67,8 @@ async def build_report(month:int, year:int, reports):
                     report[f"{channel_name}"][f"{violation_type}"] = report[f"{channel_name}"][f"{violation_type}"] + 1
 
     await handle_report(report=report, month=month, year=year, reports_channel=reports)
+    client.close()
     print(report)
-
-
-
-def get_last_day_of_month(year: int, month: int):
-    """Returns the last day of the month as an Int"""
-    num_days = calendar.monthrange(year, month)[1]
-    last_day = date(year, month, num_days)
-    return last_day.day
 
 async def handle_report(report, month, year, reports_channel):
     """Takes report and sends embed in reports channel"""

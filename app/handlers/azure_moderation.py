@@ -11,8 +11,7 @@ from handlers import violations_database_handler as vdbh
 from dotenv import load_dotenv
 load_dotenv()
 
-async def azure_text_moderation(message: discord.message,logs: discord.channel,
-                                moderation_responses: discord.channel, hate_threshold: int,
+async def azure_text_moderation(message: discord.message,logs: discord.channel, hate_threshold: int,
                                 selfharm_threshold: int, sexual_threshold:int, violence_threshold: int):
     """This function will take the message and send it to the azure content safety api
         This will return a value 0-7 the higher the number the more severe
@@ -44,7 +43,7 @@ async def azure_text_moderation(message: discord.message,logs: discord.channel,
     result = handle_response(response=response, hate_threshold=hate_threshold, selfharm_threshold=selfharm_threshold,
                              sexual_threshold=sexual_threshold, violence_threshold=violence_threshold)
     await log_handler(azure_response=result, message=message,
-                      logs=logs, moderation_responses=moderation_responses)
+                      logs=logs)
     return result
 
 
@@ -64,7 +63,7 @@ def handle_response(response, hate_threshold: int, selfharm_threshold: int,
     return result
 
 async def log_handler(azure_response, message: discord.Message,
-                      logs: discord.channel, moderation_responses: discord.channel):
+                      logs: discord.channel):
     """This function will print required logs within logs channel"""
     mod_category_text = ""
     for res in azure_response:
@@ -77,5 +76,4 @@ async def log_handler(azure_response, message: discord.Message,
         vdbh.add_record(record)
         await handle_moderation.handle_moderation(message=message,
                                                   mod_category_text=mod_category_text,
-                                                  logs=logs, azure_response=azure_response,
-                                                  moderation_responses=moderation_responses)
+                                                  logs=logs, azure_response=azure_response)

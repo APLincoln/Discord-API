@@ -90,7 +90,6 @@ def run_discord_bot(config):
                                                      sexual_threshold=config["sexual_threshold"],
                                                      violence_threshold=config["violence_threshold"],
                                                      message=message,
-                                                     logs=channels["logs"],
-                                                     moderation_responses=channels["moderation-responses"])
+                                                     logs=channels["logs"])
 
     client.run(token)

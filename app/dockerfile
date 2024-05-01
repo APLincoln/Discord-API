@@ -9,9 +9,11 @@ RUN apt-get update
 
 RUN pip install --upgrade pip
 
-# RUN pip install -r requirements.txt
+# COPY main.py bot.py ./handlers/azure_moderation.py ./handlers/handle_moderation.py ./handlers/chat_speed.py ./handlers/get_channels.py ./handlers/violations_database_handler.py .env requirements.txt ./
 
-COPY main.py bot.py responses.py gcp_moderation.py azure_moderation.py handle_moderation.py commands.py .env requirements.txt ./
+COPY main.py bot.py .env requirements.txt ./
+
+COPY ./handlers ./handlers
 
 RUN pip install -r requirements.txt
 

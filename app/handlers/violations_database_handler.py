@@ -15,7 +15,8 @@ load_dotenv()
 def create_collection():
     """Initialise collection in DB"""
     client=MongoClient(os.environ["mongodb_connection_string"])
-    db = client["ViolationsDB"]
+    db_name = os.environ["db_name"]
+    db = client[db_name]
     if "Violations" in db.list_collection_names():
         print("Collection ready to go!")
         return "collection already exists"
@@ -28,7 +29,8 @@ def create_collection():
 def add_record(record):
     """add record to DB"""
     client=MongoClient(os.environ["mongodb_connection_string"], server_api=ServerApi('1'))
-    db = client["ViolationsDB"]
+    db_name = os.environ["db_name"]
+    db = client[db_name]
     collection = db["Violations"]
     insert=collection.insert_one(record)
     print(f"{insert.inserted_id} was inserted into table")
@@ -43,7 +45,8 @@ async def build_report(month:int, year:int, reports):
     print(f"end: {end_date}")
     print(f"start: {start_date}")
     client=MongoClient(os.environ["mongodb_connection_string"], server_api=ServerApi('1'))
-    db = client["ViolationsDB"]
+    db_name = os.environ["db_name"]
+    db = client[db_name]
     collection = db["Violations"]
     query = {
         "date": {

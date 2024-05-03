@@ -1,4 +1,4 @@
-# Discord Moderation Bot
+# Discord Moderation Bot Arron Lincoln - UP2044509
 
 This repo contains code for a moderation bot that uses Azure Content Safety Studio to moderate messages against configurable thresholds.
 
